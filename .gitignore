@@ -1,0 +1,19 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Sessions and temporary files
+sessions/
+.env
+
+# IDE files
+.vscode/
+.idea/
