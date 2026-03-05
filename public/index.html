@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ultimate WhatsApp Bot</title>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body style="text-align:center;font-family:sans-serif">
+
+<h1>Scan QR Code</h1>
+<img id="qr" width="300"/>
+
+<h2 id="status"></h2>
+
+<script>
+const socket = io();
+
+socket.on("qr", (src) => {
+    document.getElementById("qr").src = src;
+});
+
+socket.on("connected", (msg) => {
+    document.getElementById("status").innerText = msg;
+});
+</script>
+
+</body>
+</html>
