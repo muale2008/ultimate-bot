@@ -1,8 +1,7 @@
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
-const makeWASocket = require("@whiskeysockets/baileys").default;
-const { useMultiFileAuthState } = require("@whiskeysockets/baileys");
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
 const QRCode = require("qrcode");
 const pino = require("pino");
 const path = require("path");
@@ -16,33 +15,63 @@ app.use(express.static(path.join(__dirname, "public")));
 let sock;
 let startTime = Date.now();
 
-// Hardcode WhatsApp version to avoid fetch delay
-const WA_VERSION = [2, 2320, 10]; // replace with latest Baileys version if needed
+/* Keep Railway service alive */
+app.get("/", (req, res) => {
+    res.send("Ultimate WhatsApp Bot Running 🚀");
+});
+
+/* Hardcoded WhatsApp version */
+const WA_VERSION = [2, 2320, 10];
 
 async function startBot() {
     try {
+
         const { state, saveCreds } = await useMultiFileAuthState("./sessions");
 
         sock = makeWASocket({
             version: WA_VERSION,
             logger: pino({ level: "silent" }),
             auth: state,
+            printQRInTerminal: false
         });
 
         sock.ev.on("creds.update", saveCreds);
 
-        // Connection updates
-        sock.ev.on("connection.update", async ({ connection, qr }) => {
+        sock.ev.on("connection.update", async (update) => {
+
+            const { connection, lastDisconnect, qr } = update;
+
             if (qr) {
                 const qrImage = await QRCode.toDataURL(qr);
                 io.emit("qr", qrImage);
-                console.log("QR code generated. Scan it!");
+                console.log("Scan this QR with WhatsApp");
             }
-            if (connection === "open") console.log("Bot Connected");
+
+            if (connection === "open") {
+                console.log("✅ Bot Connected Successfully");
+            }
+
+            if (connection === "close") {
+
+                const shouldReconnect =
+                    (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
+
+                console.log("Connection closed");
+
+                if (shouldReconnect) {
+                    console.log("Reconnecting...");
+                    startBot();
+                } else {
+                    console.log("Logged out. Delete sessions folder.");
+                }
+            }
+
         });
 
-        // Message listener
+        /* MESSAGE HANDLER */
+
         sock.ev.on("messages.upsert", async ({ messages }) => {
+
             const msg = messages[0];
             if (!msg.message || msg.key.fromMe) return;
 
@@ -64,24 +93,47 @@ async function startBot() {
             const ownerNumber = "233206777968@s.whatsapp.net";
             const isOwner = sender === ownerNumber || from === ownerNumber;
 
-            console.log("Message detected:", body, "From:", from, "Sender:", sender, "Command:", command);
+            console.log("Command:", command, "From:", from);
 
             try {
-                require("./bot")(sock, startTime, msg, from, body, command, args, isOwner);
+
+                require("./bot")(
+                    sock,
+                    startTime,
+                    msg,
+                    from,
+                    body,
+                    command,
+                    args,
+                    isOwner
+                );
+
             } catch (err) {
-                console.error("Error executing command:", err);
+
+                console.error("Command Error:", err);
+
             }
+
         });
+
     } catch (err) {
-        console.error("Fatal error in startBot:", err);
-        setTimeout(startBot, 5000);
+
+        console.error("Fatal Bot Error:", err);
+
+        setTimeout(() => {
+            console.log("Restarting bot...");
+            startBot();
+        }, 5000);
+
     }
 }
 
 startBot();
 
-// Use cloud-friendly port
-const PORT = process.env.PORT || 3000;
+/* Railway port */
+
+const PORT = process.env.PORT || 8080;
+
 server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
