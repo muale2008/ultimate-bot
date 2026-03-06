@@ -1,16 +1,28 @@
 {
   "name": "ultimate-bot",
   "version": "1.0.0",
-  "description": "Ultimate WhatsApp Bot",
-  "main": "server.js",
+  "description": "\\# Ultimate Bot",
+  "main": "bot.js",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muale2008/ultimate-bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/muale2008/ultimate-bot/issues"
+  },
+  "homepage": "https://github.com/muale2008/ultimate-bot#readme",
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.21",
-    "express": "^4.22.1",
-    "http": "^0.0.1-security",
-    "pino": "^8.21.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "express": "^5.2.1",
+    "pino": "^10.3.1",
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.3"
   }
