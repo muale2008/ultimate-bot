@@ -1,29 +1,19 @@
 {
   "name": "ultimate-bot",
   "version": "1.0.0",
+  "description": "Ultimate WhatsApp bot using Baileys",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.4.4",
-    "express": "^4.18.2",
-    "qrcode": "^1.5.1",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "express": "^4.22.1",
     "socket.io": "^4.7.1",
-    "pino": "^8.18.0"
+    "qrcode": "^1.5.1",
+    "pino": "^8.21.0"
   },
-  "description": "\\# Ultimate Bot",
-  "devDependencies": {},
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/muale2008/ultimate-bot.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/muale2008/ultimate-bot/issues"
-  },
-  "homepage": "https://github.com/muale2008/ultimate-bot#readme"
+  "engines": {
+    "node": "20.x"
+  }
 }
