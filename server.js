@@ -15,17 +15,15 @@ app.use(express.static(path.join(__dirname, "public")));
 let sock;
 let startTime = Date.now();
 
-/* Keep Railway service alive */
+// Keep Railway alive
 app.get("/", (req, res) => {
-    res.send("Ultimate WhatsApp Bot Running 🚀");
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-/* Hardcoded WhatsApp version */
 const WA_VERSION = [2, 2320, 10];
 
 async function startBot() {
     try {
-
         const { state, saveCreds } = await useMultiFileAuthState("./sessions");
 
         sock = makeWASocket({
@@ -37,41 +35,31 @@ async function startBot() {
 
         sock.ev.on("creds.update", saveCreds);
 
-        sock.ev.on("connection.update", async (update) => {
-
-            const { connection, lastDisconnect, qr } = update;
-
+        sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
             if (qr) {
-                const qrImage = await QRCode.toDataURL(qr);
-                io.emit("qr", qrImage);
-                console.log("Scan this QR with WhatsApp");
+                const qrDataURL = await QRCode.toDataURL(qr);
+                io.emit("qr", qrDataURL);
+                console.log("QR code generated — open / to scan!");
             }
 
-            if (connection === "open") {
-                console.log("✅ Bot Connected Successfully");
-            }
+            if (connection === "open") console.log("✅ Bot connected");
 
             if (connection === "close") {
-
                 const shouldReconnect =
                     (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut);
-
                 console.log("Connection closed");
 
                 if (shouldReconnect) {
                     console.log("Reconnecting...");
                     startBot();
                 } else {
-                    console.log("Logged out. Delete sessions folder.");
+                    console.log("Logged out. Delete sessions folder to start again.");
                 }
             }
-
         });
 
-        /* MESSAGE HANDLER */
-
+        // Listen to messages
         sock.ev.on("messages.upsert", async ({ messages }) => {
-
             const msg = messages[0];
             if (!msg.message || msg.key.fromMe) return;
 
@@ -89,51 +77,24 @@ async function startBot() {
 
             const command = body.split(" ")[0].toLowerCase();
             const args = body.split(" ").slice(1);
-
             const ownerNumber = "233206777968@s.whatsapp.net";
             const isOwner = sender === ownerNumber || from === ownerNumber;
 
             console.log("Command:", command, "From:", from);
 
             try {
-
-                require("./bot")(
-                    sock,
-                    startTime,
-                    msg,
-                    from,
-                    body,
-                    command,
-                    args,
-                    isOwner
-                );
-
+                require("./bot")(sock, startTime, msg, from, body, command, args, isOwner);
             } catch (err) {
-
-                console.error("Command Error:", err);
-
+                console.error("Command error:", err);
             }
-
         });
-
     } catch (err) {
-
-        console.error("Fatal Bot Error:", err);
-
-        setTimeout(() => {
-            console.log("Restarting bot...");
-            startBot();
-        }, 5000);
-
+        console.error("Fatal bot error:", err);
+        setTimeout(startBot, 5000);
     }
 }
 
 startBot();
 
-/* Railway port */
-
 const PORT = process.env.PORT || 8080;
-
-server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

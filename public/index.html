@@ -1,69 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-
-<title>Ultimate WhatsApp Bot</title>
-
-<script src="/socket.io/socket.io.js"></script>
-
-<style>
-
-body{
-background:#0f172a;
-color:white;
-font-family:Arial;
-text-align:center;
-padding-top:80px;
-}
-
-.box{
-background:#1e293b;
-padding:40px;
-border-radius:10px;
-display:inline-block;
-}
-
-img{
-width:300px;
-margin-top:20px;
-}
-
-</style>
-
+<meta charset="UTF-8">
+<title>WhatsApp Bot QR</title>
 </head>
-
 <body>
-
-<div class="box">
-
-<h1>Ultimate WhatsApp Bot</h1>
-
-<p id="status">Waiting for QR Code...</p>
-
-<img id="qr"/>
-
-</div>
-
+<h1>Scan this QR to login your bot</h1>
+<img id="qrcode" />
+<script src="/socket.io/socket.io.js"></script>
 <script>
-
-const socket = io();
-
-socket.on("qr",(data)=>{
-
-document.getElementById("qr").src=data;
-
-document.getElementById("status").innerText="Scan QR with WhatsApp";
-
-});
-
-socket.on("ready",()=>{
-
-document.getElementById("status").innerText="Bot Connected";
-
-});
-
+    const socket = io();
+    const img = document.getElementById("qrcode");
+    socket.on("qr", (data) => { img.src = data; });
 </script>
-
 </body>
-
 </html>
