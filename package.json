@@ -11,5 +11,19 @@
     "qrcode": "^1.5.1",
     "socket.io": "^4.7.1",
     "pino": "^8.18.0"
-  }
+  },
+  "description": "\\# Ultimate Bot",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muale2008/ultimate-bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/muale2008/ultimate-bot/issues"
+  },
+  "homepage": "https://github.com/muale2008/ultimate-bot#readme"
 }
