@@ -1,5 +1,5 @@
 const axios = require('axios');
-const fetch = require('node-fetch');
+require('dotenv').config(); // Make sure you have your API key in .env
 
 async function aiCommand(sock, chatId, message) {
     try {
@@ -26,73 +26,57 @@ async function aiCommand(sock, chatId, message) {
             react: { text: '🤖', key: message.key }
         });
 
-        // Define APIs for each command
-        const commandAPIs = {
-            '.gpt': [
-                `https://zellapi.autos/ai/chatbot?text=${encodeURIComponent(query)}`
-            ],
-            '.gemini': [
-                `https://vapis.my.id/api/gemini?q=${encodeURIComponent(query)}`,
-                `https://api.siputzx.my.id/api/ai/gemini-pro?content=${encodeURIComponent(query)}`,
-                `https://api.ryzendesu.vip/api/ai/gemini?text=${encodeURIComponent(query)}`,
-                `https://zellapi.autos/ai/chatbot?text=${encodeURIComponent(query)}`,
-                `https://api.giftedtech.my.id/api/ai/geminiai?apikey=${process.env.GIFTED_API_KEY}&q=${encodeURIComponent(query)}`,
-                `https://api.giftedtech.my.id/api/ai/geminiaipro?apikey=${process.env.GIFTED_API_KEY}&q=${encodeURIComponent(query)}`
-            ],
-            '.imagine': [
-                `https://api.imaginaryai.com/generate?prompt=${encodeURIComponent(query)}` // replace with real endpoint
-            ],
-            '.flux': [
-                `https://api.fluxai.com/ask?query=${encodeURIComponent(query)}` // replace with real endpoint
-            ],
-            '.sora': [
-                `https://api.soraai.com/query?text=${encodeURIComponent(query)}` // replace with real endpoint
-            ]
-        };
+        // Use OpenAI for all commands
+        let responseText;
 
-        const apis = commandAPIs[command];
+        if (['.gpt', '.gemini', '.flux', '.sora'].includes(command)) {
+            // Chat completion
+            const resp = await axios.post(
+                'https://api.openai.com/v1/chat/completions',
+                {
+                    model: "gpt-3.5-turbo",
+                    messages: [{ role: "user", content: query }],
+                    max_tokens: 1000
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
 
-        if (!apis) {
+            responseText = resp.data.choices[0].message.content;
+        } else if (command === '.imagine') {
+            // Image generation
+            const resp = await axios.post(
+                'https://api.openai.com/v1/images/generations',
+                {
+                    prompt: query,
+                    n: 1,
+                    size: "1024x1024"
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            responseText = resp.data.data[0].url; // send the image URL
+        } else {
             return await sock.sendMessage(chatId, {
                 text: "❌ Unknown AI command. Use .gpt, .gemini, .imagine, .flux, or .sora"
             }, { quoted: message });
         }
 
-        let success = false;
-
-        for (const api of apis) {
-            try {
-                const response = await fetch(api);
-                const data = await response.json();
-
-                // Normalize answer
-                const answer = data.message || data.data || data.answer || data.result;
-
-                if (answer) {
-                    await sock.sendMessage(chatId, {
-                        text: typeof answer === 'string' ? answer : JSON.stringify(answer, null, 2)
-                    }, { quoted: message });
-
-                    success = true;
-                    break;
-                }
-            } catch (err) {
-                console.warn(`API failed: ${api}`, err.message);
-                continue;
-            }
-        }
-
-        if (!success) {
-            await sock.sendMessage(chatId, {
-                text: "❌ Failed to get a response from all APIs. Please try again later.",
-                quoted: message
-            });
-        }
+        await sock.sendMessage(chatId, { text: responseText }, { quoted: message });
 
     } catch (err) {
         console.error('AI Command Error:', err);
         await sock.sendMessage(chatId, {
-            text: "❌ An unexpected error occurred. Please try again later.",
+            text: "❌ Failed to get a response. Please try again later.",
             quoted: message
         });
     }
