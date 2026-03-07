@@ -4,102 +4,98 @@ const fetch = require('node-fetch');
 async function aiCommand(sock, chatId, message) {
     try {
         const text = message.message?.conversation || message.message?.extendedTextMessage?.text;
-        
+
         if (!text) {
-            return await sock.sendMessage(chatId, { 
-                text: "Please provide a question after .gpt or .gemini\n\nExample: .gpt write a basic html code"
-            }, {
-                quoted: message
-            });
+            return await sock.sendMessage(chatId, {
+                text: "Please provide a query after the command.\n\nExample: .gpt write a basic HTML code"
+            }, { quoted: message });
         }
 
-        // Get the command and query
         const parts = text.split(' ');
         const command = parts[0].toLowerCase();
         const query = parts.slice(1).join(' ').trim();
 
         if (!query) {
-            return await sock.sendMessage(chatId, { 
-                text: "Please provide a question after .gpt or .gemini"
-            }, {quoted:message});
+            return await sock.sendMessage(chatId, {
+                text: `Please provide a question after ${command}`
+            }, { quoted: message });
         }
 
-        try {
-            // Show processing message
-            await sock.sendMessage(chatId, {
-                react: { text: '🤖', key: message.key }
-            });
+        // Show processing reaction
+        await sock.sendMessage(chatId, {
+            react: { text: '🤖', key: message.key }
+        });
 
-            if (command === '.gpt') {
-                // Call the GPT API
-                const response = await axios.get(`https://zellapi.autos/ai/chatbot?text=${encodeURIComponent(query)}`);
-                
-                if (response.data && response.data.status && response.data.result) {
-                    const answer = response.data.result;
+        // Define APIs for each command
+        const commandAPIs = {
+            '.gpt': [
+                `https://zellapi.autos/ai/chatbot?text=${encodeURIComponent(query)}`
+            ],
+            '.gemini': [
+                `https://vapis.my.id/api/gemini?q=${encodeURIComponent(query)}`,
+                `https://api.siputzx.my.id/api/ai/gemini-pro?content=${encodeURIComponent(query)}`,
+                `https://api.ryzendesu.vip/api/ai/gemini?text=${encodeURIComponent(query)}`,
+                `https://zellapi.autos/ai/chatbot?text=${encodeURIComponent(query)}`,
+                `https://api.giftedtech.my.id/api/ai/geminiai?apikey=${process.env.GIFTED_API_KEY}&q=${encodeURIComponent(query)}`,
+                `https://api.giftedtech.my.id/api/ai/geminiaipro?apikey=${process.env.GIFTED_API_KEY}&q=${encodeURIComponent(query)}`
+            ],
+            '.imagine': [
+                `https://api.imaginaryai.com/generate?prompt=${encodeURIComponent(query)}` // replace with real endpoint
+            ],
+            '.flux': [
+                `https://api.fluxai.com/ask?query=${encodeURIComponent(query)}` // replace with real endpoint
+            ],
+            '.sora': [
+                `https://api.soraai.com/query?text=${encodeURIComponent(query)}` // replace with real endpoint
+            ]
+        };
+
+        const apis = commandAPIs[command];
+
+        if (!apis) {
+            return await sock.sendMessage(chatId, {
+                text: "❌ Unknown AI command. Use .gpt, .gemini, .imagine, .flux, or .sora"
+            }, { quoted: message });
+        }
+
+        let success = false;
+
+        for (const api of apis) {
+            try {
+                const response = await fetch(api);
+                const data = await response.json();
+
+                // Normalize answer
+                const answer = data.message || data.data || data.answer || data.result;
+
+                if (answer) {
                     await sock.sendMessage(chatId, {
-                        text: answer
-                    }, {
-                        quoted: message
-                    });
-                    
-                } else {
-                    throw new Error('Invalid response from API');
-                }
-            } else if (command === '.gemini') {
-                const apis = [
-                    `https://vapis.my.id/api/gemini?q=${encodeURIComponent(query)}`,
-                    `https://api.siputzx.my.id/api/ai/gemini-pro?content=${encodeURIComponent(query)}`,
-                    `https://api.ryzendesu.vip/api/ai/gemini?text=${encodeURIComponent(query)}`,
-                    `https://zellapi.autos/ai/chatbot?text=${encodeURIComponent(query)}`,
-                    `https://api.giftedtech.my.id/api/ai/geminiai?apikey=gifted&q=${encodeURIComponent(query)}`,
-                    `https://api.giftedtech.my.id/api/ai/geminiaipro?apikey=gifted&q=${encodeURIComponent(query)}`
-                ];
+                        text: typeof answer === 'string' ? answer : JSON.stringify(answer, null, 2)
+                    }, { quoted: message });
 
-                for (const api of apis) {
-                    try {
-                        const response = await fetch(api);
-                        const data = await response.json();
-
-                        if (data.message || data.data || data.answer || data.result) {
-                            const answer = data.message || data.data || data.answer || data.result;
-                            await sock.sendMessage(chatId, {
-                                text: answer
-                            }, {
-                                quoted: message
-                            });
-                            
-                            return;
-                        }
-                    } catch (e) {
-                        continue;
-                    }
+                    success = true;
+                    break;
                 }
-                throw new Error('All Gemini APIs failed');
+            } catch (err) {
+                console.warn(`API failed: ${api}`, err.message);
+                continue;
             }
-        } catch (error) {
-            console.error('API Error:', error);
+        }
+
+        if (!success) {
             await sock.sendMessage(chatId, {
-                text: "❌ Failed to get response. Please try again later.",
-                contextInfo: {
-                    mentionedJid: [message.key.participant || message.key.remoteJid],
-                    quotedMessage: message.message
-                }
-            }, {
+                text: "❌ Failed to get a response from all APIs. Please try again later.",
                 quoted: message
             });
         }
-    } catch (error) {
-        console.error('AI Command Error:', error);
+
+    } catch (err) {
+        console.error('AI Command Error:', err);
         await sock.sendMessage(chatId, {
-            text: "❌ An error occurred. Please try again later.",
-            contextInfo: {
-                mentionedJid: [message.key.participant || message.key.remoteJid],
-                quotedMessage: message.message
-            }
-        }, {
+            text: "❌ An unexpected error occurred. Please try again later.",
             quoted: message
         });
     }
 }
 
-module.exports = aiCommand; 
+module.exports = aiCommand;
