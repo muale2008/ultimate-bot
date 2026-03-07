@@ -1,5 +1,8 @@
 const axios = require('axios');
-require('dotenv').config(); // Make sure you have your API key in .env
+
+// 🔹 Hardcoded OpenAI API Key (for local testing ONLY)
+// Do NOT push this to GitHub or public repos!
+const OPENAI_API_KEY = "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";
 
 async function aiCommand(sock, chatId, message) {
     try {
@@ -26,7 +29,6 @@ async function aiCommand(sock, chatId, message) {
             react: { text: '🤖', key: message.key }
         });
 
-        // Use OpenAI for all commands
         let responseText;
 
         if (['.gpt', '.gemini', '.flux', '.sora'].includes(command)) {
@@ -40,13 +42,14 @@ async function aiCommand(sock, chatId, message) {
                 },
                 {
                     headers: {
-                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`,
                         'Content-Type': 'application/json'
                     }
                 }
             );
 
             responseText = resp.data.choices[0].message.content;
+
         } else if (command === '.imagine') {
             // Image generation
             const resp = await axios.post(
@@ -58,19 +61,21 @@ async function aiCommand(sock, chatId, message) {
                 },
                 {
                     headers: {
-                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`,
                         'Content-Type': 'application/json'
                     }
                 }
             );
 
             responseText = resp.data.data[0].url; // send the image URL
+
         } else {
             return await sock.sendMessage(chatId, {
                 text: "❌ Unknown AI command. Use .gpt, .gemini, .imagine, .flux, or .sora"
             }, { quoted: message });
         }
 
+        // Send the final response
         await sock.sendMessage(chatId, { text: responseText }, { quoted: message });
 
     } catch (err) {
